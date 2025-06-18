@@ -3,7 +3,12 @@ name: Publish NuGet package
 on:
   push:
     tags:
-      - 'v*' # только если тег начинается с 'v', например v1.0.2
+      - 'v*' # автоматически при пуше тега вида v1.0.0
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'NuGet package version (e.g. 1.0.5)'
+        required: true
 
 jobs:
   build-and-publish:
@@ -26,7 +31,15 @@ jobs:
 
     - name: 📦 Pack NuGet package
       run: |
-        VERSION=${GITHUB_REF#refs/tags/v}
+        # определим версию:
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/v}"
+        fi
+
+        echo "📦 Building NuGet package version $VERSION"
+
         dotnet pack --configuration Release --no-build -p:IncludeSymbols=false -p:Version=$VERSION
 
     - name: 🚀 Push to nuget.org
