@@ -25,7 +25,9 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: 📦 Pack NuGet package
-      run: dotnet pack --configuration Release --no-build -p:IncludeSymbols=false -p:Version=${{ github.ref_name }}
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        dotnet pack --configuration Release --no-build -p:IncludeSymbols=false -p:Version=$VERSION
 
     - name: 🚀 Push to nuget.org
       run: dotnet nuget push **/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
