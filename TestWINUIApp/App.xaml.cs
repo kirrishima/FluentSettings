@@ -1,40 +1,31 @@
 ﻿using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Shapes;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.ApplicationModel;
-using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using FluentSettings;
 using System.Diagnostics;
+using System.Xml.Serialization;
+using TestWINUIApp.A.B.C.D.E.F.Gay;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
 namespace TestWINUIApp
 {
-
-    public partial class UserSettings
+    public partial class UserSettings : LocalSettingsBase
     {
-        [AutoSetting(Key = "IsSelected")]
+        [LocalSetting]
         public partial bool IsSelected { get; set; }
 
-        [AutoSetting()]
+        [LocalSetting]
+        [XmlElement("Aboba")]
+        [property: XmlElement("Aboba 2")]
         public partial bool Hello { get; set; }
+
+        [LocalSetting]
+        public partial MyClass Cl { get; set; }
 
         partial void OnIsSelectedChanging(bool oldValue, bool newValue, ref bool cancel)
         {
             Debug.WriteLine($"{oldValue} {newValue}");
+            //cancel = true;
         }
         partial void OnIsSelectedChanged(bool newValue)
         {

@@ -43,6 +43,15 @@ namespace FluentSettings.MySettingsGenerator
                 defaultSeverity: DiagnosticSeverity.Error,
                 isEnabledByDefault: true);
 
+        private static readonly DiagnosticDescriptor DuplicateKeyRule =
+            new DiagnosticDescriptor(
+                id: "FS002",
+                title: "Duplicate setting key",
+                messageFormat: "The setting key '{0}' is used by multiple properties: {1}",
+                category: "FluentSettingsGenerator",
+                defaultSeverity: DiagnosticSeverity.Error,
+                isEnabledByDefault: true);
+
 
         public void Initialize(IncrementalGeneratorInitializationContext ctx)
         {
@@ -157,8 +166,6 @@ namespace FluentSettings.MySettingsGenerator
             var version = typeof(SettingsGenerator)
                 .Assembly.GetName().Version?.ToString() ?? "1.0.0";
 
-
-
             // Для каждого класса делаем свой StringBuilder и свой файл
             foreach (var kv in groups)
             {
@@ -167,46 +174,20 @@ namespace FluentSettings.MySettingsGenerator
                 var props = kv.Value;
                 var typeSym = props[0].Symbol.ContainingType;
 
-                bool inherits = false;
-                for (INamedTypeSymbol b = typeSym; b != null; b = b.BaseType)
-                {
-                    if (SymbolEqualityComparer.Default.Equals(b, winuiSettingsSym))
-                    {
-                        inherits = true;
-                        break;
-                    }
-                }
 
-                if (!inherits)
-                {
-                    // Находим синтаксис самого класса, чтобы выделить имя
-                    var classDecl = typeSym.DeclaringSyntaxReferences[0]
-                        .GetSyntax() as ClassDeclarationSyntax;
-                    var location = classDecl!.Identifier.GetLocation();
+                // 1) Проверка дубликатов ключей
+                if (!CheckDuplicateKeys(spc, props, CodeAsStrings.LocalSettingAttributePrefix))
+                    continue; // пропускаем класс, если ключи не уникальны
 
-                    spc.ReportDiagnostic(
-                        Diagnostic.Create(
-                            MissingBaseClassRule,
-                            location,
-                            clsName,
-                            winuiSettingsSym.ToDisplayString()));
-
-                    // Пропускаем генерацию кода для этого класса
-                    continue;
-                }
+                // 2) Проверка наследования
+                if (!CheckBaseClass(spc, typeSym, winuiSettingsSym, clsName))
+                    continue; // пропускаем класс, если не наследуется
 
                 var sb = new StringBuilder();
 
-                // общие using’ы
-                //sb.AppendLine("using System;");
-                //sb.AppendLine("using System.Collections.Generic;");
-                //sb.AppendLine("using CommunityToolkit.Mvvm.ComponentModel;");
-                //sb.AppendLine("using Windows.Storage;");
-                sb.AppendLine();
-
-                sb.AppendLine($"namespace {ns}");
+                sb.AppendLine($"namespace {ns}"); // импорты не нужны пока 
                 sb.AppendLine("{");
-                sb.AppendLine($"    public partial class {clsName} "); // удалено: : {WinUISettings}
+                sb.AppendLine($"    public partial class {clsName} "); // удалено: : {WinUISettings}, оно должно быть явно указано пользователем
                 sb.AppendLine("    {");
 
                 foreach (var pi in props)
@@ -272,6 +253,87 @@ namespace FluentSettings.MySettingsGenerator
                 spc.AddSource($"{clsName}.LocalSettings.g.cs",
                               SourceText.From(sb.ToString(), Encoding.UTF8));
             }
+        }
+
+        /// <summary>
+        /// Проверяет, что все ключи в списке props уникальны.
+        /// При обнаружении дублирующихся ключей кидает Diagnostic и возвращает false.
+        /// </summary>
+        private static bool CheckDuplicateKeys(
+            SourceProductionContext spc,
+            IEnumerable<PropInfo> props,
+            string attributeShortName)
+        {
+            // Собираем (PropInfo, key)
+            var keyGroups = props
+                .Select(pi =>
+                {
+                    var attrData = pi.Symbol.GetAttributes()
+                        .First(ad => ad.AttributeClass?.Name == $"{attributeShortName}Attribute");
+                    var keyArg = attrData.NamedArguments
+                        .FirstOrDefault(kv => kv.Key == "Key")
+                        .Value.Value as string;
+                    var key = !string.IsNullOrEmpty(keyArg) ? keyArg : pi.Symbol.Name;
+                    return (pi, key);
+                })
+                .GroupBy(x => x.key);
+
+            var hasError = false;
+
+            foreach (var group in keyGroups.Where(g => g.Count() > 1))
+            {
+                hasError = true;
+                var key = group.Key;
+                var dupNames = string.Join(", ", group.Select(x => x.pi.Symbol.Name));
+
+                foreach (var (pi, _) in group)
+                {
+                    // Локация атрибута [LocalSetting]
+                    var loc = pi.Syntax.AttributeLists
+                        .SelectMany(al => al.Attributes)
+                        .First(a => a.Name.ToString().EndsWith(attributeShortName))
+                        .GetLocation();
+
+                    spc.ReportDiagnostic(
+                        Diagnostic.Create(
+                            DuplicateKeyRule,
+                            loc,
+                            key,
+                            dupNames));
+                }
+            }
+
+            return !hasError;
+        }
+
+        /// <returns>
+        /// true, если допустимо продолжать генерацию кода;
+        /// false, если базовый класс не найден и диагностика уже послана.
+        /// </returns>
+        private static bool CheckBaseClass(
+            SourceProductionContext spc,
+            INamedTypeSymbol classSymbol,
+            INamedTypeSymbol winuiSettingsSym,
+            string className)
+        {
+            for (var b = classSymbol; b != null; b = b.BaseType)
+            {
+                if (SymbolEqualityComparer.Default.Equals(b, winuiSettingsSym))
+                    return true;
+            }
+
+            // не нашли — сообщаем и прекращаем генерацию для этого класса
+            var classDecl = classSymbol.DeclaringSyntaxReferences[0]
+                                      .GetSyntax() as ClassDeclarationSyntax;
+            var location = classDecl!.Identifier.GetLocation();
+            spc.ReportDiagnostic(
+                Diagnostic.Create(
+                    MissingBaseClassRule,
+                    location,
+                    className,
+                    winuiSettingsSym.ToDisplayString()));
+
+            return false;
         }
     }
 }

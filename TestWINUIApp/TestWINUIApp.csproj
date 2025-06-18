@@ -42,7 +42,7 @@
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\FluentSettings\FluentSettings.MySettingsGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\FluentSettings\FluentSettings.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
 	</ItemGroup>
 
 	<!--
