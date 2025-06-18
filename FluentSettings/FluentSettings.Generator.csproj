@@ -6,17 +6,31 @@
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 		<EnableReleaseTracking>true</EnableReleaseTracking>
+
+		<PackageProjectUrl>https://github.com/kirrishima/FluentSettings</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/kirrishima/FluentSettingso</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<Description>Settings property for WinUI 3 apps</Description>
+		<PackageTags>source-generator;settings;mvvm;winui3;winui;localsettings</PackageTags>
+		<Authors>Force</Authors>
+		<Version>1.0.2</Version>
+		<PackageReadmeFile>readme.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.CodeAnalysis.Common"  Version="4.14.0" PrivateAssets="all" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp"  Version="4.14.0" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Common"  Version="4.12.0" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp"  Version="4.12.0" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all" />
-
+		<PackageReference Include="System.Collections.Immutable" Version="8.0.0" PrivateAssets="all" />
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" PrivateAssets="none"  IncludeAssets="none"/>
 		<None Include="$(OutputPath)\$(AssemblyName).dll"
 			Pack="true"
 			PackagePath="analyzers/dotnet/cs"
 			Visible="false" />
-		<!-- hides it from consumers’ IntelliSense -->
+		<!-- hides it from consumers IntelliSense -->
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="" />
 	</ItemGroup>
 </Project>
