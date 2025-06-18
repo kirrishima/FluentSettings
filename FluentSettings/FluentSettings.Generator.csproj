@@ -14,7 +14,7 @@
 		<PackageTags>source-generator;settings;mvvm;winui3;winui;localsettings</PackageTags>
 		<Authors>Force</Authors>
 		<Version>1.0.2</Version>
-		<PackageReadmeFile>readme.md</PackageReadmeFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<ItemGroup>
