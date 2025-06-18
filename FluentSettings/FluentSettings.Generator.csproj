@@ -8,7 +8,7 @@
 		<EnableReleaseTracking>true</EnableReleaseTracking>
 
 		<PackageProjectUrl>https://github.com/kirrishima/FluentSettings</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/kirrishima/FluentSettingso</RepositoryUrl>
+		<RepositoryUrl>https://github.com/kirrishima/FluentSettings</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<Description>Settings property for WinUI 3 apps</Description>
 		<PackageTags>source-generator;settings;mvvm;winui3;winui;localsettings</PackageTags>
