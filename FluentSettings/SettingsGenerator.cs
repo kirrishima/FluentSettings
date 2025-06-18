@@ -49,8 +49,11 @@ namespace FluentSettings.MySettingsGenerator
             // 1) Встраиваем атрибут AutoSettingAttribute
             ctx.RegisterPostInitializationOutput(pi =>
             {
-                pi.AddSource("LocalSettingAttribute.g.cs", SourceText.From(CodeAsStrings.LocalSettingAttribute, Encoding.UTF8));
-                pi.AddSource($"{CodeAsStrings.WinUISettingsClassName}.g.cs", SourceText.From(CodeAsStrings.WinUISettingsClass, Encoding.UTF8));
+                pi.AddSource($"{CodeAsStrings.LocalSettingAttributePrefix}Attribute.g.cs",
+                             SourceText.From(CodeAsStrings.LocalSettingAttribute, Encoding.UTF8));
+
+                pi.AddSource($"{CodeAsStrings.WinUISettingsClassName}.g.cs",
+                             SourceText.From(CodeAsStrings.WinUISettingsClass, Encoding.UTF8));
             });
 
             // 2) Находим все partial-свойства с атрибутом [AutoSetting]
@@ -93,7 +96,7 @@ namespace FluentSettings.MySettingsGenerator
 
             // Проверяем наличие нашего атрибута
             if (!symbol.GetAttributes().Any(ad =>
-                    ad.AttributeClass?.ToDisplayString() == "FluentSettings.LocalSettingAttribute"))
+                    ad.AttributeClass?.ToDisplayString() == $"FluentSettings.{CodeAsStrings.LocalSettingAttributePrefix}Attribute"))
                 return null;
 
             // Собираем остальные атрибуты (кроме AutoSetting)
@@ -107,7 +110,7 @@ namespace FluentSettings.MySettingsGenerator
                 foreach (var attr in attrList.Attributes)
                 {
                     var name = attr.Name.ToString();
-                    if (name == CodeAsStrings.LocalSettingAttribute || name.EndsWith(".LocalSetting"))
+                    if (name == CodeAsStrings.LocalSettingAttributePrefix || name.EndsWith($".{CodeAsStrings.LocalSettingAttributePrefix}"))
                         continue;
 
                     var attrType = syntaxContext.SemanticModel
@@ -131,12 +134,11 @@ namespace FluentSettings.MySettingsGenerator
          SourceProductionContext spc,
          Compilation compilation,
          ImmutableArray<PropInfo> allProps)
-
         {
             if (allProps.IsDefaultOrEmpty)
                 return;
 
-            var WinUISettings = "FluentSettings.WinUISettings";
+            var WinUISettings = $"FluentSettings.{CodeAsStrings.WinUISettingsClassName}";
 
             var winuiSettingsSym = compilation.GetTypeByMetadataName(WinUISettings);
             if (winuiSettingsSym == null)
@@ -196,20 +198,20 @@ namespace FluentSettings.MySettingsGenerator
                 var sb = new StringBuilder();
 
                 // общие using’ы
-                sb.AppendLine("using System;");
-                sb.AppendLine("using System.Collections.Generic;");
-                sb.AppendLine("using CommunityToolkit.Mvvm.ComponentModel;");
-                sb.AppendLine("using Windows.Storage;");
+                //sb.AppendLine("using System;");
+                //sb.AppendLine("using System.Collections.Generic;");
+                //sb.AppendLine("using CommunityToolkit.Mvvm.ComponentModel;");
+                //sb.AppendLine("using Windows.Storage;");
                 sb.AppendLine();
 
                 sb.AppendLine($"namespace {ns}");
                 sb.AppendLine("{");
-                sb.AppendLine($"    public partial class {clsName} : {WinUISettings}");
+                sb.AppendLine($"    public partial class {clsName} "); // удалено: : {WinUISettings}
                 sb.AppendLine("    {");
 
                 foreach (var pi in props)
                 {
-                    var propType = pi.Symbol.Type.ToDisplayString();
+                    var propType = pi.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                     var propName = pi.Symbol.Name;
 
                     // GeneratedCode-атрибут
@@ -219,7 +221,7 @@ namespace FluentSettings.MySettingsGenerator
 
                     // Ключ из LocalSettingAttribute
                     var attrData = pi.Symbol.GetAttributes()
-                        .First(ad => ad.AttributeClass?.Name == "LocalSettingAttribute");
+                        .First(ad => ad.AttributeClass?.Name == $"{CodeAsStrings.LocalSettingAttributePrefix}Attribute");
                     var keyArg = attrData.NamedArguments
                         .FirstOrDefault(kv2 => kv2.Key == "Key")
                         .Value.Value as string;
@@ -249,7 +251,7 @@ namespace FluentSettings.MySettingsGenerator
                     sb.AppendLine("            {");
                     sb.AppendLine($"                {propType} oldValue = GetSetting<{propType}>(\"{key}\");");
                     sb.AppendLine();
-                    sb.AppendLine($"                if (EqualityComparer<{propType}>.Default.Equals(oldValue, value)) return;");
+                    sb.AppendLine($"                if (global::System.Collections.Generic.EqualityComparer<{propType}>.Default.Equals(oldValue, value)) return;");
                     sb.AppendLine();
                     sb.AppendLine("                bool cancel = false;");
                     sb.AppendLine($"                On{propName}Changing(oldValue, value, ref cancel);");
