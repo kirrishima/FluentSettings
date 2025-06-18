@@ -8,6 +8,7 @@
 		<!-- ОБЯЗАТЕЛЬНО -->
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<EnableReleaseTracking>true</EnableReleaseTracking>
 	</PropertyGroup>
 
 	<ItemGroup>

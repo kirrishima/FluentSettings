@@ -6,6 +6,13 @@ namespace FluentSettings
 {
     internal class CodeAsStrings
     {
+        public static readonly string WinUISettingsClassName = "LocalSettingsBase";
+
+        /// <summary>
+        /// НЕ включая Attribute: LocalSetting для фактического названия класса LocalSettingAttribute
+        /// </summary>
+        public static readonly string LocalSettingAttributePrefix = "LocalSetting";
+
         public static string WinUISettingsClass = $@"using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
@@ -22,7 +29,7 @@ namespace FluentSettings
     /// </summary>
     [global::System.CodeDom.Compiler.GeneratedCode(""{typeof(SettingsGenerator).FullName}"", ""{typeof(SettingsGenerator).Assembly.GetName().Version}"" )]
     [global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    public class WinUISettings : ObservableObject
+    public class {WinUISettingsClassName} : ObservableObject
     {{
         /// <summary>
         /// Получает сохранённую настройку по ключу, если она существует и соответствует заданному типу.
@@ -90,7 +97,7 @@ namespace FluentSettings
 namespace {typeof(SettingsGenerator).GetParentNamespace()}
 {{
     [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-    public sealed class LocalSettingAttribute : Attribute
+    public sealed class {LocalSettingAttributePrefix}Attribute : Attribute
     {{
         /// <summary>
         /// Ключ в ApplicationData.Current.LocalSettings.Values

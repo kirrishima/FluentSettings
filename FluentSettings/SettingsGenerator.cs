@@ -34,6 +34,14 @@ namespace FluentSettings.MySettingsGenerator
             }
         }
 
+        private static readonly DiagnosticDescriptor MissingBaseClassRule =
+            new DiagnosticDescriptor(
+                id: "FS001",
+                title: $"Class must derive from {CodeAsStrings.WinUISettingsClassName}",
+                messageFormat: "Partial class '{0}' must derive from '{1}' to use the WinUI 3 settings generator",
+                category: $"FluentSettingsGenerator",
+                defaultSeverity: DiagnosticSeverity.Error,
+                isEnabledByDefault: true);
 
 
         public void Initialize(IncrementalGeneratorInitializationContext ctx)
@@ -42,7 +50,7 @@ namespace FluentSettings.MySettingsGenerator
             ctx.RegisterPostInitializationOutput(pi =>
             {
                 pi.AddSource("LocalSettingAttribute.g.cs", SourceText.From(CodeAsStrings.LocalSettingAttribute, Encoding.UTF8));
-                pi.AddSource("WinUISettings.g.cs", SourceText.From(CodeAsStrings.WinUISettingsClass, Encoding.UTF8));
+                pi.AddSource($"{CodeAsStrings.WinUISettingsClassName}.g.cs", SourceText.From(CodeAsStrings.WinUISettingsClass, Encoding.UTF8));
             });
 
             // 2) Находим все partial-свойства с атрибутом [AutoSetting]
@@ -61,7 +69,16 @@ namespace FluentSettings.MySettingsGenerator
             // 3) Собираем их в ImmutableArray<PropInfo>
             var allProps = candidates.Collect();
 
-            ctx.RegisterSourceOutput(allProps, GenerateAll);
+            var compilation = ctx.CompilationProvider;
+
+            var compilationAndProps = compilation.Combine(allProps);
+
+            ctx.RegisterSourceOutput(compilationAndProps, (spc, source) =>
+            {
+                var comp = source.Left;
+                var props = source.Right;
+                GenerateAll(spc, comp, props);
+            });
 
             //// 3) Генерируем код для каждого найденного свойства
             //ctx.RegisterSourceOutput(candidates, Generate);
@@ -90,7 +107,7 @@ namespace FluentSettings.MySettingsGenerator
                 foreach (var attr in attrList.Attributes)
                 {
                     var name = attr.Name.ToString();
-                    if (name == "LocalSetting" || name.EndsWith(".LocalSetting"))
+                    if (name == CodeAsStrings.LocalSettingAttribute || name.EndsWith(".LocalSetting"))
                         continue;
 
                     var attrType = syntaxContext.SemanticModel
@@ -110,22 +127,35 @@ namespace FluentSettings.MySettingsGenerator
         }
 
 
-        private static void GenerateAll(SourceProductionContext spc, ImmutableArray<PropInfo> allProps)
+        private static void GenerateAll(
+         SourceProductionContext spc,
+         Compilation compilation,
+         ImmutableArray<PropInfo> allProps)
+
         {
             if (allProps.IsDefaultOrEmpty)
                 return;
 
+            var WinUISettings = "FluentSettings.WinUISettings";
+
+            var winuiSettingsSym = compilation.GetTypeByMetadataName(WinUISettings);
+            if (winuiSettingsSym == null)
+            {
+                // Вдруг что-то не так с референсами
+                return;
+            }
+
             // Группируем по namespace + классу
             var groups = allProps
-                .GroupBy(pi => (
-                    ns: pi.Symbol.ContainingNamespace.ToDisplayString(),
-                    cls: pi.Symbol.ContainingType.Name))
-                .ToDictionary(g => g.Key, g => g.ToList());
+            .GroupBy(pi => (
+                ns: pi.Symbol.ContainingNamespace.ToDisplayString(),
+                cls: pi.Symbol.ContainingType.Name))
+            .ToDictionary(g => g.Key, g => g.ToList());
 
             var version = typeof(SettingsGenerator)
                 .Assembly.GetName().Version?.ToString() ?? "1.0.0";
 
-            var WinUISettings = "FluentSettings.WinUISettings";
+
 
             // Для каждого класса делаем свой StringBuilder и свой файл
             foreach (var kv in groups)
@@ -133,6 +163,35 @@ namespace FluentSettings.MySettingsGenerator
                 var ns = kv.Key.ns;
                 var clsName = kv.Key.cls;
                 var props = kv.Value;
+                var typeSym = props[0].Symbol.ContainingType;
+
+                bool inherits = false;
+                for (INamedTypeSymbol b = typeSym; b != null; b = b.BaseType)
+                {
+                    if (SymbolEqualityComparer.Default.Equals(b, winuiSettingsSym))
+                    {
+                        inherits = true;
+                        break;
+                    }
+                }
+
+                if (!inherits)
+                {
+                    // Находим синтаксис самого класса, чтобы выделить имя
+                    var classDecl = typeSym.DeclaringSyntaxReferences[0]
+                        .GetSyntax() as ClassDeclarationSyntax;
+                    var location = classDecl!.Identifier.GetLocation();
+
+                    spc.ReportDiagnostic(
+                        Diagnostic.Create(
+                            MissingBaseClassRule,
+                            location,
+                            clsName,
+                            winuiSettingsSym.ToDisplayString()));
+
+                    // Пропускаем генерацию кода для этого класса
+                    continue;
+                }
 
                 var sb = new StringBuilder();
 
