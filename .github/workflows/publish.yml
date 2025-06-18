@@ -1,0 +1,31 @@
+name: Publish NuGet package
+
+on:
+  push:
+    tags:
+      - 'v*' # только если тег начинается с 'v', например v1.0.2
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🧾 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🛠 Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.x'
+
+    - name: 📦 Restore dependencies
+      run: dotnet restore
+
+    - name: 🏗 Build
+      run: dotnet build --configuration Release --no-restore
+
+    - name: 📦 Pack NuGet package
+      run: dotnet pack --configuration Release --no-build -p:IncludeSymbols=false -p:Version=${{ github.ref_name }}
+
+    - name: 🚀 Push to nuget.org
+      run: dotnet nuget push **/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
