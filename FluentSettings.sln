@@ -1,0 +1,34 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluentSettings.MySettingsGenerator", "FluentSettings\FluentSettings.MySettingsGenerator.csproj", "{9D129CE9-8814-4146-9E8C-DBB148142257}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestWINUIApp", "TestWINUIApp\TestWINUIApp.csproj", "{C86E8A6A-131A-4DF6-BDF3-CA96760C2144}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{79F8A924-6F7B-458A-820C-224C1C9A941C}"
+	ProjectSection(SolutionItems) = preProject
+		global.json = global.json
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9D129CE9-8814-4146-9E8C-DBB148142257}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D129CE9-8814-4146-9E8C-DBB148142257}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D129CE9-8814-4146-9E8C-DBB148142257}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D129CE9-8814-4146-9E8C-DBB148142257}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C86E8A6A-131A-4DF6-BDF3-CA96760C2144}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{C86E8A6A-131A-4DF6-BDF3-CA96760C2144}.Debug|Any CPU.Build.0 = Debug|x64
+		{C86E8A6A-131A-4DF6-BDF3-CA96760C2144}.Debug|Any CPU.Deploy.0 = Debug|x64
+		{C86E8A6A-131A-4DF6-BDF3-CA96760C2144}.Release|Any CPU.ActiveCfg = Release|x64
+		{C86E8A6A-131A-4DF6-BDF3-CA96760C2144}.Release|Any CPU.Build.0 = Release|x64
+		{C86E8A6A-131A-4DF6-BDF3-CA96760C2144}.Release|Any CPU.Deploy.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

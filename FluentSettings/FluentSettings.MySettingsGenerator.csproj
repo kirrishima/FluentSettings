@@ -1,0 +1,18 @@
+﻿<!-- FluentSettings.MySettingsGenerator.csproj -->
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<!-- в самом генераторе можно оставить latest -->
+		<IsRoslynComponent>true</IsRoslynComponent>
+		<!-- ОБЯЗАТЕЛЬНО -->
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.Common"  Version="4.14.0" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp"  Version="4.14.0" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all" />
+	</ItemGroup>
+</Project>
