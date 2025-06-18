@@ -34,27 +34,15 @@ namespace FluentSettings.MySettingsGenerator
             }
         }
 
+
+
         public void Initialize(IncrementalGeneratorInitializationContext ctx)
         {
             // 1) Встраиваем атрибут AutoSettingAttribute
             ctx.RegisterPostInitializationOutput(pi =>
             {
-                pi.AddSource("LocalSettingAttribute.g.cs", SourceText.From(@$"
-using System;
-
-namespace {GetType().GetParentNamespace()}
-{{
-    [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-    public sealed class LocalSettingAttribute : Attribute
-    {{
-        /// <summary>
-        /// Ключ в ApplicationData.Current.LocalSettings.Values
-        /// (по умолчанию – имя свойства).
-        /// </summary>
-        public string Key {{ get; set; }}
-    }}
-}}
-", Encoding.UTF8));
+                pi.AddSource("LocalSettingAttribute.g.cs", SourceText.From(CodeAsStrings.LocalSettingAttribute, Encoding.UTF8));
+                pi.AddSource("WinUISettings.g.cs", SourceText.From(CodeAsStrings.WinUISettingsClass, Encoding.UTF8));
             });
 
             // 2) Находим все partial-свойства с атрибутом [AutoSetting]
@@ -122,10 +110,7 @@ namespace {GetType().GetParentNamespace()}
         }
 
 
-
-
-        private static void GenerateAll(SourceProductionContext spc,
-                                ImmutableArray<PropInfo> allProps)
+        private static void GenerateAll(SourceProductionContext spc, ImmutableArray<PropInfo> allProps)
         {
             if (allProps.IsDefaultOrEmpty)
                 return;
@@ -139,6 +124,8 @@ namespace {GetType().GetParentNamespace()}
 
             var version = typeof(SettingsGenerator)
                 .Assembly.GetName().Version?.ToString() ?? "1.0.0";
+
+            var WinUISettings = "FluentSettings.WinUISettings";
 
             // Для каждого класса делаем свой StringBuilder и свой файл
             foreach (var kv in groups)
@@ -158,7 +145,7 @@ namespace {GetType().GetParentNamespace()}
 
                 sb.AppendLine($"namespace {ns}");
                 sb.AppendLine("{");
-                sb.AppendLine($"    public partial class {clsName} : ObservableObject");
+                sb.AppendLine($"    public partial class {clsName} : {WinUISettings}");
                 sb.AppendLine("    {");
 
                 foreach (var pi in props)
@@ -197,15 +184,11 @@ namespace {GetType().GetParentNamespace()}
                     sb.AppendLine("        {");
                     sb.AppendLine("            get");
                     sb.AppendLine("            {");
-                    sb.AppendLine("                var values = ApplicationData.Current.LocalSettings.Values;");
-                    sb.AppendLine($"                if (values.TryGetValue(\"{key}\", out var o) && o is {propType} v) return v;");
-                    sb.AppendLine($"                return default({propType});");
+                    sb.AppendLine($"                return GetSetting<{propType}>(\"{key}\");");
                     sb.AppendLine("            }");
                     sb.AppendLine("            set");
                     sb.AppendLine("            {");
-                    sb.AppendLine("                var values = ApplicationData.Current.LocalSettings.Values;");
-                    sb.AppendLine($"                {propType} oldValue = default;");
-                    sb.AppendLine($"                if (values.TryGetValue(\"{key}\", out var o2) && o2 is {propType} ov) oldValue = ov;");
+                    sb.AppendLine($"                {propType} oldValue = GetSetting<{propType}>(\"{key}\");");
                     sb.AppendLine();
                     sb.AppendLine($"                if (EqualityComparer<{propType}>.Default.Equals(oldValue, value)) return;");
                     sb.AppendLine();
@@ -213,7 +196,7 @@ namespace {GetType().GetParentNamespace()}
                     sb.AppendLine($"                On{propName}Changing(oldValue, value, ref cancel);");
                     sb.AppendLine("                if (cancel) return;");
                     sb.AppendLine();
-                    sb.AppendLine($"                values[\"{key}\"] = value;");
+                    sb.AppendLine($"                SetSetting(\"{key}\", value);");
                     sb.AppendLine($"                OnPropertyChanged(nameof({propName}));");
                     sb.AppendLine($"                On{propName}Changed(value);");
                     sb.AppendLine("            }");
@@ -229,7 +212,5 @@ namespace {GetType().GetParentNamespace()}
                               SourceText.From(sb.ToString(), Encoding.UTF8));
             }
         }
-
-
     }
 }
