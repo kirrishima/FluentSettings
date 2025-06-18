@@ -1,10 +1,11 @@
-﻿using System;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Text;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.CSharp;
 
 namespace FluentSettings.MySettingsGenerator
 {
@@ -16,11 +17,16 @@ namespace FluentSettings.MySettingsGenerator
         {
             public PropertyDeclarationSyntax Syntax { get; }
             public IPropertySymbol Symbol { get; }
+            public IReadOnlyList<(string fqName, string argText, string ns)> CopiedAttrs { get; }
 
-            public PropInfo(PropertyDeclarationSyntax syntax, IPropertySymbol symbol)
+            public PropInfo(
+                PropertyDeclarationSyntax syntax,
+                IPropertySymbol symbol,
+                IReadOnlyList<(string fqName, string argText, string ns)> copiedAttrs)
             {
                 Syntax = syntax;
                 Symbol = symbol;
+                CopiedAttrs = copiedAttrs;
             }
         }
 
@@ -45,6 +51,7 @@ namespace FluentSettings
             });
 
             // 2) Находим все partial-свойства с атрибутом [AutoSetting]
+            // Находим все partial-свойства с атрибутом [AutoSetting]
             var candidates = ctx.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: (node, _) =>
@@ -53,24 +60,49 @@ namespace FluentSettings
                         && p.AttributeLists.Count > 0,
                     transform: (syntaxContext, _) =>
                     {
-                        // Приводим узел
                         var propSyntax = (PropertyDeclarationSyntax)syntaxContext.Node;
-                        // Пытаемся взять символ
                         var symbol = syntaxContext.SemanticModel.GetDeclaredSymbol(propSyntax) as IPropertySymbol;
                         if (symbol == null)
                             return null;
 
-                        // Проверяем атрибут
-                        var hasAttr = symbol.GetAttributes()
-                            .Any(ad => ad.AttributeClass?.ToDisplayString() == "FluentSettings.AutoSettingAttribute");
-                        if (!hasAttr)
+                        // Проверяем наличие нашего атрибута
+                        if (!symbol.GetAttributes().Any(ad =>
+                                ad.AttributeClass?.ToDisplayString() == "FluentSettings.AutoSettingAttribute"))
                             return null;
 
-                        // Всё ок — возвращаем обёртку
-                        return new PropInfo(propSyntax, symbol);
+                        // Собираем остальные атрибуты (кроме AutoSetting)
+                        var copied = new List<(string nameSyntax, string argText, string ns)>();
+
+                        foreach (var attrList in propSyntax.AttributeLists)
+                        {
+                            // оставляем только списки вида [property: ...]
+                            if (attrList.Target?.Identifier.Text != "property")
+                                continue;
+
+                            foreach (var attr in attrList.Attributes)
+                            {
+                                // фильтруем AutoSetting
+                                var name = attr.Name.ToString();
+                                if (name == "AutoSetting" || name.EndsWith(".AutoSetting"))
+                                    continue;
+
+                                // получаем символ атрибута
+                                var attrType = syntaxContext.SemanticModel
+                                    .GetSymbolInfo(attr).Symbol?
+                                    .ContainingType as INamedTypeSymbol;
+                                if (attrType == null)
+                                    continue;
+
+                                // записываем короткое имя и аргументы
+                                var argText = attr.ArgumentList?.ToFullString() ?? string.Empty;
+                                var ns = attrType.ContainingNamespace.ToDisplayString();
+                                copied.Add((name, argText, ns));
+                            }
+                        }
+
+                        return new PropInfo(propSyntax, symbol, copied);
                     }
                 )
-                // Отфильтровываем ненулевые
                 .Where(x => x != null)!;
 
             // 3) Генерируем код для каждого найденного свойства
@@ -101,15 +133,27 @@ namespace FluentSettings
 
                 // Строим исходник
 
+                var usings = new HashSet<string>(StringComparer.Ordinal)
+                {
+                    "System.Collections.Generic",
+                    "CommunityToolkit.Mvvm.ComponentModel",
+                    "Windows.Storage"
+                };
+
                 var autoGeneratedAttribute = "        [global::System.CodeDom.Compiler.GeneratedCode(" +
                                             $"\"{GetType().FullName}\", " +
                                             $"\"{version}\")]";
 
                 var sb = new StringBuilder();
-                sb.AppendLine("using System.Collections.Generic;");
-                sb.AppendLine("using CommunityToolkit.Mvvm.ComponentModel;");
-                sb.AppendLine("using CommunityToolkit.Mvvm.Input;");
-                sb.AppendLine("using Windows.Storage;");
+
+                foreach (var attr in propInfo.CopiedAttrs)
+                    usings.Add(attr.ns);
+
+                foreach (var u in usings)
+                    sb.AppendLine($"using {u};");
+                sb.AppendLine();
+
+
                 sb.AppendLine("");
                 sb.AppendLine($"namespace {ns}");
                 sb.AppendLine("{");
@@ -121,6 +165,12 @@ namespace FluentSettings
                 sb.AppendLine(autoGeneratedAttribute);
                 sb.AppendLine($"        partial void On{propName}Changed({propType} newValue);");
                 sb.AppendLine();
+
+                foreach (var (fqName, argText, _) in propInfo.CopiedAttrs)
+                {
+                    sb.AppendLine($"        [property: {fqName}{argText}]");
+                }
+
                 sb.AppendLine(autoGeneratedAttribute);
                 sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]");
                 sb.AppendLine($"        public partial {propType} {propName}");
