@@ -187,7 +187,7 @@ namespace FluentSettings.MySettingsGenerator
 
                 sb.AppendLine($"namespace {ns}"); // импорты не нужны пока 
                 sb.AppendLine("{");
-                sb.AppendLine($"    public partial class {clsName} "); // удалено: : {WinUISettings}, оно должно быть явно указано пользователем
+                sb.AppendLine($"    partial class {clsName} "); // удалено: : {WinUISettings}, оно должно быть явно указано пользователем
                 sb.AppendLine("    {");
 
                 foreach (var pi in props)
