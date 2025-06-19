@@ -1,9 +1,9 @@
 {
   "profiles": {
-    "TestWINUIApp (Package)": {
+    "FluentSettings.Generator.DEMO (Package)": {
       "commandName": "MsixPackage"
     },
-    "TestWINUIApp (Unpackaged)": {
+    "FluentSettings.Generator.DEMO (Unpackaged)": {
       "commandName": "Project"
     }
   }
